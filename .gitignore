@@ -1,5 +1,3 @@
-# .gitignore for tilli-prompts
-
 # Python
 __pycache__/
 *.py[cod]
