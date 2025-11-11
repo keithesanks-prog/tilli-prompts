@@ -15,6 +15,15 @@ class ModelConfig:
     top_k: int = 50
     max_output_tokens: int = 4096
 
+    def to_dict(self) -> dict[str, float | int]:
+        """Return configuration as dictionary compatible with generation APIs."""
+        return {
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "top_k": self.top_k,
+            "max_output_tokens": self.max_output_tokens,
+        }
+
     @classmethod
     def conservative(cls) -> "ModelConfig":
         """Conservative settings for highly structured responses."""
@@ -47,4 +56,12 @@ class EvaluationConfig:
                 "consistency",
                 "creativity",
             ]
+
+    def to_dict(self) -> dict[str, float | str | List[str]]:
+        """Return configuration as dictionary for downstream consumers."""
+        return {
+            "judge_model": self.judge_model,
+            "judge_temperature": self.judge_temperature,
+            "evaluation_dimensions": list(self.evaluation_dimensions or []),
+        }
 
