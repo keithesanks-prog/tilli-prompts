@@ -28,6 +28,8 @@ pip install -e /path/to/tilli-prompts
 ```python
 from tilli_prompts import InterventionPrompt, CurriculumPrompt
 from tilli_prompts.schemas import InterventionPlan, CurriculumResponse
+from tilli_prompts.logging import CSVLogger
+from tilli_prompts.config import ModelConfig
 
 # Generate intervention prompt
 prompt_data = {
@@ -48,6 +50,13 @@ curriculum_data = {
     "score": 65.5,
 }
 curriculum_prompt = CurriculumPrompt.get_prompt("gemini", curriculum_data)
+
+# Log evaluation results to CSV
+logger = CSVLogger("evaluations.csv")
+logger.log({"model": "gemini-1.5-pro", "question": "How do I teach empathy?"})
+
+# Access shared model configuration presets
+config = ModelConfig.enhanced()
 ```
 
 ## Structure
@@ -61,6 +70,10 @@ tilli-prompts/
 │   └── schemas/
 │       ├── base.py
 │       └── curriculum.py
+│   ├── logging/
+│   │   └── csv_logger.py
+│   └── config/
+│       └── models.py
 ├── pyproject.toml
 └── README.md
 ```
@@ -91,4 +104,11 @@ pytest
 # Format code
 black .
 ```
+
+## Release Notes
+
+- **1.1.0** – Added shared logging utilities (`CSVLogger`) and model configuration presets (`ModelConfig`, `EvaluationConfig`).
+- **1.0.0** – Initial release with shared prompts and schema definitions.
+
+
 
