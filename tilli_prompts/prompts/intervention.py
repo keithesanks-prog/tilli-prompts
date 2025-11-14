@@ -243,6 +243,12 @@ class InterventionPrompt:
         },
     }
 
+    DETAIL_LEVELS = {
+        "detailed": "Detailed (schema + safeguards)",
+        "focused": "Focused (reduced scaffolding)",
+        "minimal": "Minimal (loose instructions)",
+    }
+
     BASE_TEMPLATE = """You are an expert Educational Intervention Specialist focusing on emotional intelligence development in children.
 
 TASK: Create a detailed intervention plan for a class showing difficulties in emotional recognition and expression.
@@ -312,13 +318,69 @@ FINAL CHECK:
     OPENAI_TEMPLATE = BASE_TEMPLATE + """
 Note: Format your response as a JSON object without any additional text or explanation."""
 
+    FOCUSED_BASE_TEMPLATE = """You are an SEL intervention coach. Use the classroom snapshot to produce a concise JSON plan focused on {deficient_area}.
+
+CLASS SNAPSHOT:
+- Class ID: {class_id}
+- Students: {num_students}
+- Focus Area: {deficient_area}
+- EMT averages: EMT1 {emt1_avg:.2f}%, EMT2 {emt2_avg:.2f}%, EMT3 {emt3_avg:.2f}%, EMT4 {emt4_avg:.2f}%
+
+GUIDANCE:
+- Provide JSON with keys: analysis, strategies (exactly 3), timeline, success_metrics
+- Tie every strategy directly to {deficient_area}; optional cross-support from other EMT areas
+- Keep sentences short (≤2) and avoid repeating the prompt wording
+- Use measurable language for success metrics
+
+Reference schema (align fields, adapt content):
+{schema}
+
+Strategy ideas you may reuse or adapt:
+{focused_strategies}
+
+Return only the JSON object."""
+
+    FOCUSED_GEMINI_TEMPLATE = FOCUSED_BASE_TEMPLATE + """
+Ensure the JSON is valid (double quotes, no trailing commas)."""
+
+    MINIMAL_TEMPLATE = """Class {class_id} ({num_students} students) struggles most with {deficient_area}.
+EMT averages: {emt1_avg:.0f}/{emt2_avg:.0f}/{emt3_avg:.0f}/{emt4_avg:.0f}.
+
+Quickly outline:
+- 3 short activities teachers can try tomorrow (one sentence each)
+- A 4-week rollout (Week 1-4, one bullet each)
+- 2 simple indicators of success
+
+Write in plain text (no JSON needed). Keep under 180 words. Stay positive and age-appropriate."""
+
+    VARIANT_TEMPLATES = {
+        "detailed": {
+            "gemini": GEMINI_TEMPLATE,
+            "openai": OPENAI_TEMPLATE,
+            "default": BASE_TEMPLATE,
+        },
+        "focused": {
+            "gemini": FOCUSED_GEMINI_TEMPLATE,
+            "openai": FOCUSED_BASE_TEMPLATE,
+            "default": FOCUSED_BASE_TEMPLATE,
+        },
+        "minimal": {
+            "gemini": MINIMAL_TEMPLATE,
+            "openai": MINIMAL_TEMPLATE,
+            "default": MINIMAL_TEMPLATE,
+        },
+    }
+
     @classmethod
-    def get_prompt(cls, provider: str, data: Dict[str, Any]) -> str:
+    def get_prompt(
+        cls, provider: str, data: Dict[str, Any], detail_level: str = "detailed"
+    ) -> str:
         """Get formatted prompt for specified provider.
 
         Args:
             provider: LLM provider name ('gemini', 'openai', etc.)
             data: Dictionary containing template variables
+            detail_level: Level of prompt scaffolding ('detailed', 'focused', 'minimal')
 
         Returns:
             Formatted prompt string
@@ -338,13 +400,16 @@ Note: Format your response as a JSON object without any additional text or expla
         else:
             data["focused_strategies"] = "No specific strategies available for this area."
 
-        # Select template based on provider
-        template = {
-            "gemini": cls.GEMINI_TEMPLATE,
-            "openai": cls.OPENAI_TEMPLATE,
-        }.get(provider, cls.BASE_TEMPLATE)
+        variant_key = detail_level if detail_level in cls.DETAIL_LEVELS else "detailed"
+        template_map = cls.VARIANT_TEMPLATES.get(variant_key, cls.VARIANT_TEMPLATES["detailed"])
+        template = template_map.get(provider, template_map["default"])
 
         return template.format(**data)
+
+    @classmethod
+    def get_detail_levels(cls) -> Dict[str, str]:
+        """Return available prompt detail levels."""
+        return cls.DETAIL_LEVELS.copy()
 
     @classmethod
     def _format_strategies_for_prompt(cls, strategy_info: Dict[str, Any]) -> str:

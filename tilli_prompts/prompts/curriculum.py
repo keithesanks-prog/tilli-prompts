@@ -8,6 +8,12 @@ from tilli_prompts.schemas.curriculum import CurriculumResponse
 class CurriculumPrompt:
     """Manages prompt templates for curriculum-based intervention generation."""
 
+    DETAIL_LEVELS = {
+        "detailed": "Detailed (schema + safeguards)",
+        "focused": "Focused (reduced scaffolding)",
+        "minimal": "Minimal (loose instructions)",
+    }
+
     BASE_TEMPLATE = """You are an expert Educational Intervention Specialist focusing on emotional intelligence development in children.
 
 TASK: Create a personalized intervention plan based on grade level and current performance.
@@ -54,6 +60,49 @@ Note: Return only a valid JSON object matching the schema exactly."""
 
     OPENAI_TEMPLATE = BASE_TEMPLATE + """
 Note: Provide only the JSON response without any additional text or explanation."""
+
+    FOCUSED_BASE_TEMPLATE = """You are designing a concise SEL plan for Grade {grade_level}.
+Focus areas: {skill_areas}
+Current performance: {score}%\n
+Guidelines:
+- Provide JSON with keys: overview, strategies (3 items), implementation_order, success_metrics
+- Prioritize the lowest-performing focus areas
+- Keep descriptions under two sentences
+- Use classroom-ready language\n
+Reference schema for structure:
+{schema}\n
+Interventions you can draw from:
+{interventions}\n
+Return only the JSON object."""
+
+    FOCUSED_GEMINI_TEMPLATE = FOCUSED_BASE_TEMPLATE + """
+Ensure the JSON is valid and free of extra commentary."""
+
+    MINIMAL_TEMPLATE = """Grade {grade_level} student(s) need support with {skill_areas}.
+Score: {score}%.\n
+Create:
+- 3 quick activity ideas with one-sentence descriptions
+- A simple order to try them
+- 2 metrics to check progress\n
+Write as plain text bullet lists (no JSON). Keep it brief and student-friendly."""
+
+    VARIANT_TEMPLATES = {
+        "detailed": {
+            "gemini": GEMINI_TEMPLATE,
+            "openai": OPENAI_TEMPLATE,
+            "default": BASE_TEMPLATE,
+        },
+        "focused": {
+            "gemini": FOCUSED_GEMINI_TEMPLATE,
+            "openai": FOCUSED_BASE_TEMPLATE,
+            "default": FOCUSED_BASE_TEMPLATE,
+        },
+        "minimal": {
+            "gemini": MINIMAL_TEMPLATE,
+            "openai": MINIMAL_TEMPLATE,
+            "default": MINIMAL_TEMPLATE,
+        },
+    }
 
     # The curriculum data is stored as a class variable
     CURRICULUM_DATA = """
@@ -114,12 +163,15 @@ Note: Provide only the JSON response without any additional text or explanation.
     """
 
     @classmethod
-    def get_prompt(cls, provider: str, data: Dict[str, Any]) -> str:
+    def get_prompt(
+        cls, provider: str, data: Dict[str, Any], detail_level: str = "detailed"
+    ) -> str:
         """Get formatted prompt for specified provider.
 
         Args:
             provider: LLM provider name ('gemini', 'openai', etc.)
             data: Dictionary containing template variables
+            detail_level: Prompt scaffolding level
 
         Returns:
             Formatted prompt string
@@ -131,11 +183,14 @@ Note: Provide only the JSON response without any additional text or explanation.
         # Format skill areas for prompt
         data["skill_areas"] = ", ".join(data["skill_areas"])
 
-        # Select template based on provider
-        template = {
-            "gemini": cls.GEMINI_TEMPLATE,
-            "openai": cls.OPENAI_TEMPLATE,
-        }.get(provider, cls.BASE_TEMPLATE)
+        variant_key = detail_level if detail_level in cls.DETAIL_LEVELS else "detailed"
+        template_map = cls.VARIANT_TEMPLATES.get(variant_key, cls.VARIANT_TEMPLATES["detailed"])
+        template = template_map.get(provider, template_map["default"])
 
         return template.format(**data)
+
+    @classmethod
+    def get_detail_levels(cls) -> Dict[str, str]:
+        """Return available prompt detail options."""
+        return cls.DETAIL_LEVELS.copy()
 

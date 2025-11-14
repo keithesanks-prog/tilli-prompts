@@ -41,7 +41,8 @@ prompt_data = {
     "emt3_avg": 72.0,
     "emt4_avg": 63.0,
 }
-prompt = InterventionPrompt.get_prompt("gemini", prompt_data)
+# Optional prompt scaffolding levels: "detailed" (default), "focused", "minimal"
+prompt = InterventionPrompt.get_prompt("gemini", prompt_data, detail_level="focused")
 
 # Generate curriculum prompt
 curriculum_data = {
@@ -49,7 +50,11 @@ curriculum_data = {
     "skill_areas": ["emotional_awareness", "emotional_regulation"],
     "score": 65.5,
 }
-curriculum_prompt = CurriculumPrompt.get_prompt("gemini", curriculum_data)
+curriculum_prompt = CurriculumPrompt.get_prompt("gemini", curriculum_data, detail_level="minimal")
+
+# Discover available variants at runtime
+InterventionPrompt.get_detail_levels()
+CurriculumPrompt.get_detail_levels()
 
 # Log evaluation results to CSV
 logger = CSVLogger("evaluations.csv")

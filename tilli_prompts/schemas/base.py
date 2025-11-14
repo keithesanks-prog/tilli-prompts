@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 from pydantic import BaseModel, Field, validator
 
 
@@ -78,6 +78,22 @@ class SuccessMetrics(BaseModel):
 
 class InterventionPlan(BaseModel):
     analysis: str = Field(..., description="Analysis of performance data")
+    reasoning_process: Dict[str, Any] = Field(
+        ..., 
+        description="Structured reasoning process showing step-by-step thinking",
+        example={
+            "step1_analyze_data": "Identified EMT1 scores below 50% indicating foundational skill gaps",
+            "step2_root_causes": "Visual recognition skills need development, limited exposure to emotion vocabulary",
+            "step3_strategy_selection": "Selected visual flashcards aligned with CASEL framework",
+            "step4_context_adaptation": "Adapted for 25 students using small group format",
+            "step5_timeline_creation": "Progressive 4-week scaffold from basic to complex emotions"
+        }
+    )
+    psychology_principles: List[str] = Field(
+        ..., 
+        description="Educational psychology principles applied in this intervention",
+        example=["Vygotsky Scaffolding", "Gardner Multiple Intelligences", "CASEL Self-Awareness Framework"]
+    )
     strategies: List[InterventionStrategy] = Field(..., min_items=1, max_items=5)
     timeline: Dict[str, List[str]] = Field(..., description="4-week implementation timeline")
     success_metrics: SuccessMetrics
